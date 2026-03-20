@@ -25,6 +25,7 @@ pipenv run python strategy_calculator.py [arguments]
 | `-l` | `--laps` | Total number of laps in the race. | Yes | |
 | `-f` | `--fuel-consumption` | Fuel consumption per lap as a percentage (e.g., `2` for 2%). | Yes | |
 | `-m` | `--max-stops` | Maximum number of pit stops allowed in the race. | No | `3` |
+| `-W` | `--target-wear` | Target tire wear percentage to pit at. | No | `70.0` |
 
 ### Example
 
@@ -42,7 +43,7 @@ pipenv run python strategy_calculator.py -w 5 -t s -l 20 -f 4.5 -m 2
 
 ### Output Example
 
-The script outputs the maximum number of laps each compound can withstand (assuming a 70% target wear threshold), followed by all viable race strategies sorted by lowest number of pit stops and softest tire choices.
+The script outputs the maximum number of laps each compound can withstand (based on the target wear threshold), followed by all viable race strategies sorted by lowest number of pit stops and softest tire choices.
 
 ```text
 Max laps per tire (at 70% wear): Soft: 14, Medium: 21, Hard: 28

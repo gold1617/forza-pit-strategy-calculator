@@ -8,6 +8,7 @@ def main():
     parser.add_argument("-l","--laps", type=int, help="Total number of laps in the race")
     parser.add_argument("-m","--max-stops", type=int, default=3, help="Maximum number of pit stops allowed")
     parser.add_argument("-f","--fuel-consumption", type=float, help="Fuel consumption per lap (percentage, e.g., 2 for 2%)")
+    parser.add_argument("-W", "--target-wear", type=float, default=70.0, help="Target tire wear percentage to pit at (default: 70)")
     
     args = parser.parse_args()
     
@@ -26,7 +27,7 @@ def main():
     wear_m = wear_s * (2.0 / 3.0)
     wear_h = wear_s * 0.5
     
-    TARGET_WEAR = 70
+    TARGET_WEAR = args.target_wear
     laps_s = TARGET_WEAR / wear_s
     laps_m = TARGET_WEAR / wear_m
     laps_h = TARGET_WEAR / wear_h
