@@ -6,6 +6,14 @@ name = "pypi"
 [packages]
 
 [dev-packages]
+pytest = "*"
+black = "*"
+flake8 = "*"
 
 [requires]
 python_version = "3.12"
+
+[scripts]
+calculate = "python -m src.main"
+test = "python -m pytest tests"
+lint = "bash -c 'black src tests && flake8 src tests'"

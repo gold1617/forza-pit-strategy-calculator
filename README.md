@@ -1,19 +1,55 @@
 # Forza Pit Strategy Calculator
 
-A simple command-line tool written in Python to calculate optimal tire and fuel strategies for a race. The calculator takes into account your car's tire wear rates and fuel consumption, outputting possible stint distributions and pit stop strategies.
+A command-line tool written in Python to calculate optimal tire and fuel strategies for a race. The calculator natively connects to the Forza Motorsport UDP Telemetry stream to actively measure your car's tire wear rates and fuel consumption by analyzing your practice laps, outputting highly precise stint distributions and pit stop strategies based on real data.
 
 ## Setup
 
-1. Ensure you have Python 3 and `pipenv` installed on your machine.
+1. Ensure you have Python 3.12+ and `pipenv` installed on your machine.
 2. Clone or download this repository.
-3. Run `pipenv install` to set up the virtual environment and install any required dependencies.
+3. Run `pipenv install --dev` to set up the virtual environment and install all required source and development dependencies.
 
 ## Usage
 
-You can run the tool from your terminal or command prompt by executing `strategy_calculator.py` using `pipenv run` and passing the necessary flags.
+### 1. Configuration (Forza Telemetry)
+Before running the calculator, ensure Forza Motorsport is configured to send Data Out (UDP telemetry) to the address matching your `config.json` settings natively located in the root of the project:
+
+```json
+{
+  "udp": {
+    "host": "0.0.0.0",
+    "port": 36792,
+    "timeout_seconds": 30.0
+  }
+}
+```
+*Note: In Forza's HUD settings, set **Data Out** to On, **Data Out IP Address** to your machine's local IP (or `127.0.0.1` if running locally), **Data Out IP Port** to `36792`, and explicitly set the **Data Out Packet Format** to **DASH**.*
+
+### 2. Automated Collection (Recommended)
+You can run the tool's integrated collector and calculation orchestration script automatically by executing:
 
 ```bash
-pipenv run python strategy_calculator.py [arguments]
+pipenv run calculate
+```
+
+- When triggered, it will spin up a UDP server asynchronously waiting for Forza's practice laps.
+- Run a few clean laps!
+- The script uses the active data stream to empirically evaluate your precise tire wear rates and fuel consumption per lap.
+- Once you are finished driving (or simply pause the game), the collector will safely timeout (defined natively in `config.json` as `timeout_seconds`, defaulting to 30s) and automatically advance to the terminal strategy builder.
+- Input your race's total lap count, target tire wear boundaries, and maximum acceptable pits, and it will output all calculated strategies!
+
+### 3. Utility Scripts
+The project comes packaged with pipenv shorthands for standard developer utilities:
+- **`pipenv run test`**: Runs the entire `pytest` mock testing validation framework suite locally.
+- **`pipenv run lint`**: Formats the codebase via `black` and strictly checks for logic errors using `flake8`.
+
+---
+
+## Manual Execution (Legacy Option)
+
+If you do not want to connect the UDP collector to gather data dynamically, you can still natively execute the legacy strategy calculation logic by passing your metrics explicitly via the command line arguments.
+
+```bash
+pipenv run python -m src.strategy.calculator [arguments]
 ```
 
 ### Arguments
@@ -27,29 +63,3 @@ pipenv run python strategy_calculator.py [arguments]
 | `-m` | `--max-stops` | Maximum number of pit stops allowed in the race. | No | `3` |
 | `-W` | `--target-wear` | Target tire wear percentage to pit at. | No | `70.0` |
 
-### Example
-
-Let's say you are doing a 20-lap race. In practice, you measured your soft tires wearing at 5% per lap, and your fuel consuming at 4.5% per lap. You'd like to limit the strategies to a maximum of 2 stops:
-
-```bash
-pipenv run python strategy_calculator.py --wear-rate 5 --tire-type s --laps 20 --fuel-consumption 4.5 --max-stops 2
-```
-
-Using short flags:
-
-```bash
-pipenv run python strategy_calculator.py -w 5 -t s -l 20 -f 4.5 -m 2
-```
-
-### Output Example
-
-The script outputs the maximum number of laps each compound can withstand (based on the target wear threshold), followed by all viable race strategies sorted by lowest number of pit stops and softest tire choices.
-
-```text
-Max laps per tire (at 70% wear): Soft: 14, Medium: 21, Hard: 28
-
-Total possible strategies found: ...
-
-Strategy 1 [1 stop(s)]: S (14 laps, fuel to 100.0%)  -> S (6 laps) 
-Strategy 2 [1 stop(s)]: S (10 laps, fuel to 100.0%)  -> M (10 laps) 
-```
