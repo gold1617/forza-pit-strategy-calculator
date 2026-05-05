@@ -9,11 +9,14 @@ name = "pypi"
 pytest = "*"
 black = "*"
 flake8 = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.12"
 
 [scripts]
-calculate = "python -m src.main"
-test = "python -m pytest tests"
-lint = "bash -c 'black src tests && flake8 src tests'"
+calculate = "python -m src.main" # Run the calculator
+test = "python -m pytest tests" # Run unit tests
+format = "black src tests" # Run code formatter
+lint = "flake8 src tests" # Run linter
+coverage = "python -m pytest --cov=src --cov-report=term-missing" # Run unit tests with coverage

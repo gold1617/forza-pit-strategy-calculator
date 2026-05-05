@@ -5,6 +5,11 @@ from src.strategy.calculator import calculate_strategies, print_strategies
 
 
 def main():
+    """
+    Main entry point for the Forza Pit Strategy Calculator.
+    Orchestrates telemetry collection, user input gathering,
+    and strategy calculation and printing.
+    """
     print("=== Forza Pit Strategy Automation ===")
 
     # Load config
@@ -17,6 +22,7 @@ def main():
     except Exception as e:
         print(f"Warning: Could not load config.json ({e}). Using defaults.")
         host, port = "0.0.0.0", 61482
+        timeout_seconds = 60.0
 
     # Step 1: Collect Telemetry
     avg_wear, avg_fuel = collect_telemetry(host, port, timeout_seconds)
@@ -30,9 +36,9 @@ def main():
 
     # Step 2: Prompt for required inputs
     print("--- Race Configuration ---")
-    tire_type = input("Tire compound used during practice [s/m/h]: ").strip().lower()
-    if tire_type not in ["s", "m", "h"]:
-        print("Invalid compound. Choose from s, m, or h.")
+    tire_type = input("Tire compound used during practice [s/m/h/o]: ").strip().lower()
+    if tire_type not in ["s", "m", "h", "o"]:
+        print("Invalid compound. Choose from s, m, h, or o.")
         sys.exit(1)
 
     try:

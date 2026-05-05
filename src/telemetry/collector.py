@@ -1,7 +1,6 @@
 import socket
 import struct
 import copy
-import time
 
 DASH_FIELDS = [
     "IsRaceOn",
@@ -101,6 +100,10 @@ DASH_PACKET_SIZE = struct.calcsize(DASH_FORMAT)
 
 
 def parse_packet(data):
+    """
+    Parses raw UDP bytes into a dictionary of telemetry fields
+    based on the Forza Dash format.
+    """
     if len(data) >= DASH_PACKET_SIZE:
         parsed_data = struct.unpack(DASH_FORMAT, data[:DASH_PACKET_SIZE])
         return dict(zip(DASH_FIELDS, parsed_data))
@@ -108,11 +111,18 @@ def parse_packet(data):
 
 
 def _update_avg(current_avg, delta, laps_averaged):
+    """
+    Updates the moving average incrementally with new lap data.
+    """
     total_consumption = (current_avg * (laps_averaged - 1)) + delta
     return total_consumption / laps_averaged
 
 
 def collect_telemetry(host="0.0.0.0", port=36792, timeout_seconds=60.0):
+    """
+    Listens for Forza telemetry via UDP, detecting laps completed and calculating
+    the average tire wear and fuel consumption per lap.
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((host, port))
     sock.settimeout(timeout_seconds)
@@ -218,13 +228,17 @@ def collect_telemetry(host="0.0.0.0", port=36792, timeout_seconds=60.0):
             else:
                 if packet and last_valid_receive_ms:
                     # Calculate diff with 32-bit unsigned wrap protection
-                    diff_ms = (packet["TimestampMS"] - last_valid_receive_ms) & 0xFFFFFFFF
+                    diff_ms = (
+                        packet["TimestampMS"] - last_valid_receive_ms
+                    ) & 0xFFFFFFFF
                     if diff_ms > (timeout_seconds * 1000):
                         # print(f"\nNo telemetry received for {diff_ms} ms. Stopping data collection.")
                         raise socket.timeout
 
     except socket.timeout:
-        print(f"\nNo telemetry received for {timeout_seconds} seconds. Stopping data collection.")
+        print(
+            f"\nNo telemetry received for {timeout_seconds} seconds. Stopping data collection."
+        )
     except KeyboardInterrupt:
         print("\nCollection stopped manually.")
 

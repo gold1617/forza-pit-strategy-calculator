@@ -6,9 +6,18 @@ stint_lengths = {}
 
 
 def get_stint_lengths(wear_rate, target_wear, tire_type):
+    """
+    Calculates the maximum laps possible for each tire compound
+    based on the observed wear rate and the target wear percentage.
+    """
     if wear_rate <= 0:
         print("Error: Wear rate must be positive.")
+        if tire_type == "o":
+            return {"o": 0}
         return {"s": 0, "m": 0, "h": 0}
+
+    if tire_type == "o":
+        return {"o": round(target_wear / wear_rate)}
 
     if tire_type == "s":
         wear_s = wear_rate
@@ -30,10 +39,16 @@ def get_stint_lengths(wear_rate, target_wear, tire_type):
 def calculate_strategies(
     wear_rate, target_wear, tire_type, laps, max_stops, fuel_consumption
 ):
+    """
+    Computes all valid pit stop strategies given race constraints.
+    Returns a sorted list of strategies ordered by fewest stops and optimal tire usage.
+    """
     global stint_lengths
     stint_lengths = get_stint_lengths(wear_rate, target_wear, tire_type)
 
-    if stint_lengths["h"] == 0:
+    if "h" in stint_lengths and stint_lengths["h"] == 0:
+        return []
+    if "o" in stint_lengths and stint_lengths["o"] == 0:
         return []
 
     start_fuel = min(laps * fuel_consumption, 100.0)
@@ -41,8 +56,10 @@ def calculate_strategies(
     global cached_strategies
     cached_strategies = {}
 
+    max_laps_for_fuel = int(100.0 / fuel_consumption) if fuel_consumption > 0 else laps
+
     strategies = find_strategies(
-        laps, max_stops, round(start_fuel, 2), fuel_consumption
+        laps, max_stops, round(start_fuel, 2), fuel_consumption, max_laps_for_fuel
     )
 
     strategies.sort(
@@ -57,14 +74,23 @@ def calculate_strategies(
 
 
 def print_strategies(strategies, target_wear, wear_rate, tire_type):
+    """
+    Formats and prints the calculated race strategies and maximum stint lengths
+    to standard output.
+    """
     sl = get_stint_lengths(wear_rate, target_wear, tire_type)
-    print(
-        f"Max laps per tire (at {target_wear}% wear): Soft: {sl['s']}, Medium: {sl['m']}, Hard: {sl['h']}\n"
-    )
-
-    if sl["h"] == 0:
-        print("Error: Wear rate is too high to complete even 1 lap on Hard tires!")
-        return
+    if "o" in sl:
+        print(f"Max laps per tire (at {target_wear}% wear): Other: {sl['o']}\n")
+        if sl["o"] == 0:
+            print("Error: Wear rate is too high to complete even 1 lap!")
+            return
+    else:
+        print(
+            f"Max laps per tire (at {target_wear}% wear): Soft: {sl['s']}, Medium: {sl['m']}, Hard: {sl['h']}\n"
+        )
+        if sl["h"] == 0:
+            print("Error: Wear rate is too high to complete even 1 lap on Hard tires!")
+            return
 
     print(f"Total possible strategies found: {len(strategies)}\n")
 
@@ -83,7 +109,13 @@ def print_strategies(strategies, target_wear, wear_rate, tire_type):
         print(f"Strategy {i+1} [{stops} stop(s)]: {strat_str}")
 
 
-def find_strategies(num_laps, max_stops, fuel_at_start_of_stint, fuel_consumption):
+def find_strategies(
+    num_laps, max_stops, fuel_at_start_of_stint, fuel_consumption, max_laps_for_fuel
+):
+    """
+    Recursively finds possible combinations of tire stints to complete the race
+    while respecting the maximum stops and fuel limits.
+    """
     if num_laps <= 0:
         return [[]]
 
@@ -91,14 +123,17 @@ def find_strategies(num_laps, max_stops, fuel_at_start_of_stint, fuel_consumptio
         return cached_strategies[num_laps]
 
     strategies = []
-    tires_to_use = ["s"]
-    if num_laps > stint_lengths["s"]:
-        tires_to_use.append("m")
-    if num_laps > stint_lengths["m"]:
-        tires_to_use.append("h")
+    if "o" in stint_lengths:
+        tires_to_use = ["o"]
+    else:
+        tires_to_use = ["s"]
+        if num_laps > stint_lengths["s"] and max_laps_for_fuel > stint_lengths["s"]:
+            tires_to_use.append("m")
+        if num_laps > stint_lengths["m"] and max_laps_for_fuel > stint_lengths["m"]:
+            tires_to_use.append("h")
 
     for tire in tires_to_use:
-        laps_in_stint = min(stint_lengths[tire], num_laps)
+        laps_in_stint = min(stint_lengths[tire], num_laps, max_laps_for_fuel)
         additional_fuel = 0
         fuel_consumed_in_stint = round(laps_in_stint * fuel_consumption, 2)
         if fuel_consumed_in_stint > fuel_at_start_of_stint:
@@ -112,7 +147,11 @@ def find_strategies(num_laps, max_stops, fuel_at_start_of_stint, fuel_consumptio
         )
 
         current_strategies = find_strategies(
-            num_laps - laps_in_stint, max_stops, fuel_after_stint, fuel_consumption
+            num_laps - laps_in_stint,
+            max_stops,
+            fuel_after_stint,
+            fuel_consumption,
+            max_laps_for_fuel,
         )
         for strat in current_strategies:
             if len(strat) > max_stops or fuel_after_stint < 0:
@@ -134,6 +173,10 @@ def find_strategies(num_laps, max_stops, fuel_at_start_of_stint, fuel_consumptio
 
 
 def main():
+    """
+    CLI entry point for the strategy calculator to allow manual data entry
+    without telemetry collection.
+    """
     parser = argparse.ArgumentParser(
         description="Calculate possible tire strategies for a race."
     )
@@ -146,8 +189,8 @@ def main():
     parser.add_argument(
         "-t",
         "--tire-type",
-        choices=["s", "m", "h"],
-        help="Tire type the wear rate applies to",
+        choices=["s", "m", "h", "o"],
+        help="Tire type the wear rate applies to (s=Soft, m=Medium, h=Hard, o=Other)",
     )
     parser.add_argument(
         "-l", "--laps", type=int, help="Total number of laps in the race"
